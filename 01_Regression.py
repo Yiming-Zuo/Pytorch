@@ -1,13 +1,16 @@
-import torch
-import torch.utils.data as Data  # 读取数据模块
-import torch.nn as nn # 神经网络模块
-import torch.nn.functional as F  # 激励函数
-from torch.nn import init  # 初始化参数模块
-import torch.optim as optim # 优化器模块
-import numpy as np
 from time import time
 
-# torch.manual_seed(1)    # 复现
+import numpy as np
+import torch
+import torch.nn as nn  # 神经网络模块
+import torch.nn.functional as F  # 激励函数
+import torch.optim as optim  # 优化器模块
+import torch.utils.data as Data  # 读取数据模块
+from torch.nn import init  # 初始化参数模块
+
+# torch.manual_seed(1)    # 设计随机seed，用于复现
+
+# ---------- 1.生成并读取数据集(也可以直接导入已有数据集) ----------
 
 # 生成数据集
 num_inputs = 2  # 特征数
@@ -21,12 +24,15 @@ labels += torch.tensor(np.random.normal(0, 0.01, size=labels.size()),
                        dtype=torch.float32)  # 生成标签（含噪声）shape=1000
 
 # 读取数据
-batch_size = 10
+batch_size = 10  # 设置batchsize
 # 组合特征与标签成训练集
 dataset = Data.TensorDataset(features, labels)
 # 生成小批量随机样本
 data_iter = Data.DataLoader(dataset, batch_size, shuffle=True)
 
+# ---------- 1.end -----------
+
+# ---------- 2.定义并创建网络 ----------
 
 # 定义网络
 class Net(nn.Module):
@@ -65,20 +71,26 @@ optimizer = optim.SGD(net.parameters(), lr=0.02)  # 优化器 传入网络的所
 #                 {'params': net.predict.parameters(), 'lr': 0.01}
 #             ], lr=0.03)
 
-start = time()
+# ---------- 2.end ----------
+
+# ---------- 3.训练模型 ----------
+
+start = time()  # 训练起始时间
 epochs = 10
 
 
 for epoch in range(epochs):
     train_l_sum, train_acc_sum, n = 0.0, 0.0, 0
-    for X, y in data_iter:
-        output = net(X)
-        l = loss_func(output, y.view(-1, 1)).sum()
-        optimizer.zero_grad()
-        l.backward()
-        optimizer.step()
+    for X, y in data_iter:  # 遍历样本
+        output = net(X)  # 预测值
+        l = loss_func(output, y.view(-1, 1)).sum()  # 损失
+        optimizer.zero_grad()  # 梯度清零
+        l.backward()  # 反向传播
+        optimizer.step()  # 更新参数
         train_l_sum += l.item()
         train_acc_sum += (output.argmax(dim=1) == y.view(-1, 1)).sum().item()
         n += y.shape[0]
     print('epoch:%d | loss:%.4f | time:%.2f'
           % (epoch + 1, train_l_sum / n, time()-start))
+
+# ---------- 3.end ----------
